@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Box,
   Paper,
@@ -9,13 +10,15 @@ import {
 } from '@mui/material'
 import { cardSx, formSx, primaryButtonSx, secondaryButtonSx } from './authStyles'
 
-function LoginForm() {
+function LoginForm({ onLogin }) {
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
   function handleSubmit(event) {
     event.preventDefault()
-    console.log({ email, password })
+    onLogin(email)
+    navigate('/')
   }
 
   return (
@@ -60,7 +63,7 @@ function LoginForm() {
         </Typography>
       </Divider>
 
-      <Button variant="outlined" fullWidth sx={secondaryButtonSx}>
+      <Button variant="outlined" fullWidth sx={secondaryButtonSx} onClick={() => navigate('/signup')}>
         Sign Up
       </Button>
     </Paper>

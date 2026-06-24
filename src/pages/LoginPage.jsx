@@ -1,7 +1,7 @@
 import { Box } from '@mui/material'
 import LoginForm from '../components/auth/LoginForm'
 
-function LoginPage() {
+function LoginPage({ onLogin }) {
   return (
     <Box
       sx={{
@@ -14,7 +14,7 @@ function LoginPage() {
         py: 4,
       }}
     >
-      <LoginForm />
+      <LoginForm onLogin={onLogin} />
     </Box>
   )
 }

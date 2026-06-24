@@ -1,13 +1,14 @@
 import { useState } from 'react'
+import { NavLink } from 'react-router-dom'
 import {
   Box,
   Paper,
   Typography,
   TextField,
   Button,
-  Divider,
+  Link,
 } from '@mui/material'
-import { cardSx, formSx, primaryButtonSx, secondaryButtonSx } from './authStyles'
+import { cardSx, formSx, primaryButtonSx } from './authStyles'
 
 function SignupForm() {
   const [name, setName] = useState('')
@@ -73,15 +74,16 @@ function SignupForm() {
         </Button>
       </Box>
 
-      <Divider sx={{ my: 1 }}>
-        <Typography variant="caption" color="text.secondary">
-          Already have an account?
-        </Typography>
-      </Divider>
-
-      <Button variant="outlined" fullWidth sx={secondaryButtonSx}>
-        Login
-      </Button>
+      <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1 }}>
+        Already have an account?{' '}
+        <Link
+          component={NavLink}
+          to="/login"
+          sx={{ color: '#6366f1', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+        >
+          Login
+        </Link>
+      </Typography>
     </Paper>
   )
 }

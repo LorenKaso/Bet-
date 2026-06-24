@@ -5,7 +5,7 @@ import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 import { NavLink } from 'react-router-dom'
 
-function TopBar() {
+function TopBar({ userEmail, onLogout }) {
   return (
     <AppBar
       position="static"
@@ -56,14 +56,31 @@ function TopBar() {
             Search
           </Button>
 
-          <Button
-            component={NavLink}
-            to="/login"
-            color="inherit"
-            sx={{ fontWeight: 700, textTransform: 'none' }}
-          >
-            Login
-          </Button>
+          {userEmail ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>
+                {userEmail}
+              </Typography>
+              <Button
+                component={NavLink}
+                to="/login"
+                color="inherit"
+                onClick={onLogout}
+                sx={{ fontWeight: 700, textTransform: 'none', py: 0, minHeight: 0 }}
+              >
+                Logout
+              </Button>
+            </Box>
+          ) : (
+            <Button
+              component={NavLink}
+              to="/login"
+              color="inherit"
+              sx={{ fontWeight: 700, textTransform: 'none' }}
+            >
+              Login
+            </Button>
+          )}
         </Box>
       </Toolbar>
     </AppBar>
