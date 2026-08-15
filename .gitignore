@@ -32,3 +32,9 @@ dist-ssr
 
 # Test coverage
 coverage
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc

@@ -1,18 +1,20 @@
 import { Button, TableCell, TableRow } from '@mui/material'
+import { useNavigate } from 'react-router-dom'
 
 function UserRow({ user }) {
+  const navigate = useNavigate()
+
   return (
     <TableRow>
-      <TableCell>{user.email}</TableCell>
-
-      <TableCell align="center">
-        {user.postsCount}
+      <TableCell>
+        {user.username}
       </TableCell>
 
       <TableCell align="center">
         <Button
           variant="contained"
           size="small"
+          onClick={() => navigate(`/profile/${user.username}`)}
           sx={{
             borderRadius: 999,
             textTransform: 'none',
@@ -21,7 +23,7 @@ function UserRow({ user }) {
             backgroundColor: '#6366f1',
           }}
         >
-          See Posts
+          Go to Profile
         </Button>
       </TableCell>
     </TableRow>

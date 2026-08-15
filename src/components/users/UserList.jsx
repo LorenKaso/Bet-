@@ -17,11 +17,19 @@ function UserList({ users }) {
       <Table size="small">
         <TableHead>
           <TableRow sx={{ backgroundColor: '#f3f4f6' }}>
-            <TableCell sx={{ fontWeight: 700, width: '45%' }}>Email</TableCell>
-            <TableCell align="center" sx={{ fontWeight: 700, width: '25%' }}>
-              Posts
+            <TableCell sx={{ fontWeight: 700, width: '60%' }}>
+              Username
             </TableCell>
-            <TableCell align="center" sx={{ width: '30%' }} />
+
+            <TableCell
+              align="center"
+              sx={{
+                fontWeight: 700,
+                width: '40%',
+              }}
+            >
+              Profile
+            </TableCell>
           </TableRow>
         </TableHead>
 

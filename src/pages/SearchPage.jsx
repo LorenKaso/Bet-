@@ -4,7 +4,8 @@ import InputAdornment from '@mui/material/InputAdornment'
 import SvgIcon from '@mui/material/SvgIcon'
 import TextField from '@mui/material/TextField'
 import UserList from '../components/users/UserList'
-import LoadMoreButton from '../components/LoadMoreButton'
+import CircularProgress from '@mui/material/CircularProgress'
+import Alert from '@mui/material/Alert'
 
 function SearchIcon(props) {
   return (
@@ -14,39 +15,57 @@ function SearchIcon(props) {
   )
 }
 
-// TODO: replace with real API call
-const ALL_USERS = [
-  { email: 'alice@example.com', postsCount: 12 },
-  { email: 'bob@example.com', postsCount: 7 },
-  { email: 'carol@example.com', postsCount: 23 },
-  { email: 'dave@example.com', postsCount: 3 },
-  { email: 'eve@example.com', postsCount: 15 },
-  { email: 'frank@example.com', postsCount: 9 },
-  { email: 'grace@example.com', postsCount: 4 },
-  { email: 'heidi@example.com', postsCount: 11 },
-]
-const PAGE_SIZE = 6
 
 function SearchPage() {
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [query, setQuery] = useState('')
-  const [page, setPage] = useState(1)
-
-  const filtered = ALL_USERS.filter(u =>
-    u.email.includes(query.trim().toLowerCase())
-  )
-  const users = filtered.slice(0, page * PAGE_SIZE)
-  const hasMore = filtered.length > users.length
-
+  
   const handleSearch = (e) => {
     setQuery(e.target.value)
-    setPage(1)
   }
+
+  useEffect(() => {
+    const searchValue = query.trim()
+
+    if (!searchValue) {
+      setUsers([])
+      setError('')
+      return
+    }
+
+    async function searchUsers() {
+      try {
+        setLoading(true)
+        setError('')
+
+        const response = await fetch(
+          `http://localhost:8000/users/search?q=${encodeURIComponent(searchValue)}`
+        )
+
+        if (!response.ok) {
+          throw new Error('Failed to search users')
+        }
+
+        const data = await response.json()
+
+        setUsers(data.users)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    searchUsers()
+  }, [query])
 
   return (
     <Box component="main" sx={{ minHeight: 'calc(100svh - 72px)', bgcolor: '#fff', px: { xs: 2, md: 6 }, py: { xs: 3, md: 4 } }}>
       <TextField
         fullWidth
-        placeholder="Search by email..."
+        placeholder="Search by username..."
         variant="outlined"
         value={query}
         onChange={handleSearch}
@@ -72,9 +91,24 @@ function SearchPage() {
           '& .MuiInputBase-input::placeholder': { color: '#8792a2', opacity: 1, fontWeight: 600 },
         }}
       />
-      <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+      <Box
+        sx={{
+          mt: 3,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 2,
+        }}
+      >
+        {loading && <CircularProgress />}
+
+        {error && (
+          <Alert severity="error">
+            {error}
+          </Alert>
+        )}
+
         <UserList users={users} />
-        {hasMore && <LoadMoreButton onClick={() => setPage(p => p + 1)} />}
       </Box>
     </Box>
   )

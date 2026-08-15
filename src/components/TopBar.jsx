@@ -5,7 +5,7 @@ import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 import { NavLink } from 'react-router-dom'
 
-function TopBar({ userEmail, onLogout }) {
+function TopBar({ currentUser, onLogout }) {
   return (
     <AppBar
       position="static"
@@ -21,6 +21,7 @@ function TopBar({ userEmail, onLogout }) {
             Bet!
           </Typography>
 
+          {currentUser && (    
           <Button
             component={NavLink}
             to="/new-post"
@@ -35,6 +36,7 @@ function TopBar({ userEmail, onLogout }) {
           >
             + New Post
           </Button>
+          )}
         </Box>
 
         <Box sx={{ display: 'flex', gap: { xs: 1, md: 3 } }}>
@@ -56,11 +58,21 @@ function TopBar({ userEmail, onLogout }) {
             Search
           </Button>
 
-          {userEmail ? (
+          {currentUser ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>
-                {userEmail}
-              </Typography>
+              <Button
+                component={NavLink}
+                to={`/profile/${encodeURIComponent(currentUser.username)}`}
+                color="inherit"
+                sx={{
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  py: 0,
+                  minHeight: 0,
+                }}
+              >
+                {currentUser.username}
+              </Button>
               <Button
                 component={NavLink}
                 to="/login"
