@@ -1,24 +1,18 @@
-import re
-import os
-import secrets
-from datetime import datetime, timedelta, timezone
 from typing import Any, cast
-from dotenv import load_dotenv
 
-import bcrypt
 import bleach
-import mysql.connector
-from fastapi import Cookie, FastAPI, HTTPException, Request, Response, Query
+
+from database import get_db_connection
+from fastapi import Cookie, FastAPI, HTTPException, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import (
         BaseModel,
-        EmailStr,
         Field,
-        field_validator,
         model_validator,
     )
+from routes.password_reset import router as password_reset_router
+from routes.auth import router as auth_router
 
-load_dotenv()
 
 ALLOWED_POST_TAGS = [
     "p",
@@ -67,255 +61,9 @@ app.add_middleware(
 )
 
 
-def get_db_connection():
-    return mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME"),
-    )
-
-
 @app.get("/")
 def root():
     return {"message": "Backend is running"}
-
-
-class RegisterRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=50)
-    username: str = Field(min_length=3, max_length=50)
-    email: EmailStr = Field(max_length=254)
-    password: str = Field(min_length=8, max_length=64)
-
-    @field_validator("name", mode="before")
-    @classmethod
-    def validate_name(cls, value: str) -> str:
-        value = value.strip()
-
-        if not value:
-            raise ValueError("Name is required")
-
-        return value
-
-    @field_validator("username", mode="before")
-    @classmethod
-    def validate_username(cls, value: str) -> str:
-        value = value.strip()
-
-        if not re.search(r"[A-Za-z]", value):
-            raise ValueError(
-                "Username must contain at least one English letter"
-            )
-
-        if not re.fullmatch(r"[A-Za-z0-9!@#$%&*_.?-]+", value):
-            raise ValueError(
-                "Username contains invalid characters"
-            )
-
-        return value
-
-    @field_validator("email", mode="before")
-    @classmethod
-    def normalize_email(cls, value: str) -> str:
-        return value.strip()
-
-    @field_validator("password")
-    @classmethod
-    def validate_password(cls, value: str) -> str:
-        if re.search(r"\s", value):
-            raise ValueError("Password cannot contain spaces")
-
-        if not re.search(r"[A-Za-z]", value):
-            raise ValueError(
-                "Password must contain at least one English letter"
-            )
-
-        if not re.search(r"\d", value):
-            raise ValueError(
-                "Password must contain at least one number"
-            )
-
-        return value
-
-
-@app.post("/register")
-def register(user: RegisterRequest):
-    connection = get_db_connection()
-    cursor = connection.cursor(dictionary=True)
-
-    cursor.execute(
-        """
-        SELECT id, email, username
-        FROM users
-        WHERE email = %s OR username = %s
-        """,
-        (user.email, user.username),
-    )
-
-    existing_user = cast(dict[str, object] | None, cursor.fetchone())
-
-    cursor.close()
-    connection.close()
-
-    if existing_user:
-        if existing_user["email"] == user.email:
-            raise HTTPException(
-                status_code=409,
-                detail="Email already registered",
-            )
-
-        raise HTTPException(
-            status_code=409,
-            detail="Username already taken",
-        )
-
-    password_hash = bcrypt.hashpw(
-        user.password.encode("utf-8"),
-        bcrypt.gensalt(),
-    ).decode("utf-8")
-
-    connection = get_db_connection()
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        INSERT INTO users (name, username, email, password_hash)
-        VALUES (%s, %s, %s, %s)
-        """,
-        (
-            user.name,
-            user.username,
-            user.email,
-            password_hash,
-        ),
-    )
-
-    connection.commit()
-
-    cursor.close()
-    connection.close()
-
-    return {
-        "message": "User registered successfully",
-        "name": user.name,
-        "username": user.username,
-        "email": user.email,
-    }
-
-
-class LoginRequest(BaseModel):
-    email: EmailStr = Field(max_length=254)
-    password: str = Field(min_length=1, max_length=64)
-
-    @field_validator("email", mode="before")
-    @classmethod
-    def normalize_email(cls, value: str) -> str:
-        return value.strip()
-
-
-@app.post("/login")
-def login(user: LoginRequest, response: Response):
-    connection = get_db_connection()
-    cursor = connection.cursor(dictionary=True)
-
-    cursor.execute(
-        """
-        SELECT id, email, username, password_hash
-        FROM users
-        WHERE email = %s
-        """,
-        (user.email,),
-    )
-
-    existing_user = cast(
-        dict[str, str | int] | None,
-        cursor.fetchone(),
-    )
-
-    cursor.close()
-    connection.close()
-
-    if existing_user is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid email or password",
-        )
-
-    password_hash = cast(str, existing_user["password_hash"])
-    password_matches = bcrypt.checkpw(
-        user.password.encode("utf-8"),
-        password_hash.encode("utf-8"),
-    )
-
-    if not password_matches:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid email or password",
-        )
-
-    session_id = secrets.token_urlsafe(32)
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-    connection = get_db_connection()
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        INSERT INTO sessions (session_id, user_id, expires_at)
-        VALUES (%s, %s, %s)
-        """,
-        (
-            session_id,
-            existing_user["id"],
-            expires_at,
-        ),
-    )
-
-    connection.commit()
-
-    cursor.close()
-    connection.close()
-
-    response.set_cookie(
-        key="session_id",
-        value=session_id,
-        httponly=True,
-        samesite="lax",
-        max_age=60 * 60 * 24 * 7,
-    )
-    return {
-        "message": "Login successful",
-        "email": existing_user["email"],
-        "username": existing_user["username"],
-    }
-
-
-@app.post("/logout")
-def logout(
-    response: Response,
-    session_id: str | None = Cookie(default=None),
-):
-    if session_id:
-        connection = get_db_connection()
-        cursor = connection.cursor()
-
-        cursor.execute(
-            """
-            DELETE FROM sessions
-            WHERE session_id = %s
-            """,
-            (session_id,),
-        )
-
-        connection.commit()
-        cursor.close()
-        connection.close()
-
-    response.delete_cookie(
-        key="session_id",
-        samesite="lax",
-    )
-
-    return {"message": "Logout successful"}
 
 
 class PostCreateRequest(BaseModel):
@@ -428,7 +176,8 @@ def get_posts(
                 posts.image_url,
                 posts.created_at,
                 users.id AS user_id,
-                users.username
+                users.username,
+                users.profile_image
             FROM posts
             JOIN users
                 ON posts.user_id = users.id
@@ -1087,7 +836,8 @@ def get_following_posts(
                 posts.image_url,
                 posts.created_at,
                 users.id AS user_id,
-                users.username
+                users.username,
+                users.profile_image
             FROM posts
             JOIN users
                 ON posts.user_id = users.id
@@ -1118,3 +868,7 @@ def get_following_posts(
     finally:
         cursor.close()
         connection.close()
+
+
+app.include_router(auth_router)
+app.include_router(password_reset_router)

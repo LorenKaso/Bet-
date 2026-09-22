@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS sessions (
         ON DELETE CASCADE
 );
 
-CREATE TABLE followers (
+CREATE TABLE IF NOT EXISTS followers (
     follower_id INT NOT NULL,
     following_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
